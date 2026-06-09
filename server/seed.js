@@ -72,4 +72,8 @@ const insert = db.prepare(`
   VALUES (@title, @category, @time, @servings, @description, @image, @ingredients, @steps)
 `)
 
+for (const recipe of recipes) {
+  insert.run(recipe)
+}
+
 console.log('Database seeded with 6 recipes ✅')

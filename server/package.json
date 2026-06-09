@@ -2,5 +2,9 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3"
   }
 }

@@ -1,35 +1,38 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import RecipeCard from '../components/RecipeCard'
-import { ALL_RECIPES } from '../data/recipes' 
-
-// Hardcoded recipe data — we'll replace this with an API call later
-
+import { fetchRecipes } from '../api/recipes'
 
 const CATEGORIES = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert']
 
 export default function Home() {
-
+  const [recipes, setRecipes] = useState([])
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  // Filter logic — runs on every render based on current search + category
-  const filteredRecipes = ALL_RECIPES
-    .filter(recipe => {
-      // Category filter — skip if 'All' is selected
-      if (activeCategory !== 'All' && recipe.category !== activeCategory) {
-        return false
+  // useEffect runs after the component renders
+  // We fetch recipes whenever search or category changes
+  useEffect(() => {
+    async function loadRecipes() {
+      try {
+        setLoading(true)
+        setError('')
+        const data = await fetchRecipes({ category: activeCategory, search })
+        setRecipes(data)
+      } catch (err) {
+        setError('Could not load recipes. Is the server running?')
+      } finally {
+        setLoading(false)
       }
-      // Search filter — checks if title includes the search text (case insensitive)
-      if (search && !recipe.title.toLowerCase().includes(search.toLowerCase())) {
-        return false
-      }
-      return true
-    })
+    }
+
+    loadRecipes()
+  }, [activeCategory, search]) // ← re-runs when these change
 
   return (
     <div className="min-h-screen bg-orange-50">
-
       <Navbar />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
@@ -45,7 +48,7 @@ export default function Home() {
           />
         </div>
 
-        {/* Category filter buttons */}
+        {/* Category filters */}
         <div className="flex gap-2 flex-wrap mb-8">
           {CATEGORIES.map(category => (
             <button
@@ -62,14 +65,16 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Recipe grid */}
-        {filteredRecipes.length === 0 ? (
-          <p className="text-center text-gray-400 mt-16 text-lg">
-            No recipes found 😕
-          </p>
+        {/* States — loading, error, empty, results */}
+        {loading ? (
+          <p className="text-center text-gray-400 mt-16">Loading recipes...</p>
+        ) : error ? (
+          <p className="text-center text-red-400 mt-16">{error}</p>
+        ) : recipes.length === 0 ? (
+          <p className="text-center text-gray-400 mt-16 text-lg">No recipes found 😕</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredRecipes.map(recipe => (
+            {recipes.map(recipe => (
               <RecipeCard key={recipe.id} recipe={recipe} />
             ))}
           </div>
