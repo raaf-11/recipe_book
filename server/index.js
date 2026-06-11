@@ -1,12 +1,17 @@
+require('dotenv').config()
+
 const express = require('express')
 const cors = require('cors')
 const { initializeDatabase } = require('./database')
 const recipeRoutes = require('./routes/recipes')
 const authRoutes = require('./routes/auth')
+const generatorRoutes = require('./routes/generator') 
 
 const app = express()
-const PORT = 3000
-
+const PORT = process.env.PORT || 3000
+console.log('recipeRoutes:', typeof recipeRoutes)
+console.log('authRoutes:', typeof authRoutes)
+console.log('generatorRoutes:', typeof generatorRoutes)
 
 app.use(cors())               
 app.use(express.json())       
@@ -16,7 +21,7 @@ initializeDatabase()
 
 app.use('/api/recipes', recipeRoutes)
 app.use('/api/auth', authRoutes)     
-
+app.use('/api/generator', generatorRoutes)    
 
 app.get('/api/health', (req, res) => {
   res.json({ message: 'Server is running' })

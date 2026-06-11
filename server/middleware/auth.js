@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const JWT_SECRET = 'recipebook_secret_key_2024'
+const JWT_SECRET = process.env.JWT_SECRET
 
 module.exports = function authMiddleware(req, res, next) {
   // Token comes in the Authorization header as "Bearer <token>"
