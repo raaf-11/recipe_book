@@ -6,6 +6,7 @@ const { initializeDatabase } = require('./database')
 const recipeRoutes = require('./routes/recipes')
 const authRoutes = require('./routes/auth')
 const generatorRoutes = require('./routes/generator') 
+const cookbookRoutes = require('./routes/cookbook')  
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -22,6 +23,7 @@ initializeDatabase()
 app.use('/api/recipes', recipeRoutes)
 app.use('/api/auth', authRoutes)     
 app.use('/api/generator', generatorRoutes)    
+app.use('/api/cookbook', cookbookRoutes)       
 
 app.get('/api/health', (req, res) => {
   res.json({ message: 'Server is running' })
