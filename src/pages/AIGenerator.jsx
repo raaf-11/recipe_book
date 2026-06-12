@@ -1,12 +1,51 @@
 import { useState } from 'react'
 import Navbar from '../components/Navbar'
 import { generateRecipe } from '../api/generator'
+import { submitRecipe } from '../api/recipes'     
+import { saveRecipe } from '../api/cookbook'        
+import { useAuth } from '../context/AuthContext'    
+import { useNavigate } from 'react-router-dom'  
 
 export default function AIGenerator() {
   const [ingredients, setIngredients] = useState('')
   const [loading, setLoading] = useState(false)
   const [recipe, setRecipe] = useState(null)
   const [error, setError] = useState('')
+  const { user } = useAuth()
+const navigate = useNavigate()
+const [saving, setSaving] = useState(false)
+const [savedSuccess, setSavedSuccess] = useState(false)
+
+async function handleSaveToCookbook() {
+  if (!user) {
+    navigate('/login')
+    return
+  }
+
+  setSaving(true)
+  try {
+    // Step 1 — insert the generated recipe into the recipes table
+    const submitted = await submitRecipe({
+      title: recipe.title,
+      category: recipe.category,
+      time: recipe.time,
+      servings: recipe.servings,
+      description: recipe.description,
+      image: recipe.image || null,
+      ingredients: recipe.ingredients,
+      steps: recipe.steps
+    })
+
+    // Step 2 — save it to the user's cookbook
+    await saveRecipe(submitted.id)
+
+    setSavedSuccess(true)
+  } catch (err) {
+    alert(err.message)
+  } finally {
+    setSaving(false)
+  }
+}
 
   async function handleGenerate(e) {
     e.preventDefault()
@@ -135,10 +174,17 @@ export default function AIGenerator() {
       </div>
 
       {/* Save button */}
-      <button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition-colors">
-        📖 Save to Cookbook
-      </button>
-
+      <button
+  onClick={handleSaveToCookbook}
+  disabled={saving || savedSuccess}
+  className={`w-full font-semibold py-3 rounded-xl transition-colors
+    ${savedSuccess
+      ? 'bg-gray-100 text-gray-600'
+      : 'bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white'
+    }`}
+>
+  {saving ? 'Saving...' : savedSuccess ? '✅ Saved to Cookbook!' : '📖 Save to Cookbook'}
+</button>
     </div>
   </div>
 )}

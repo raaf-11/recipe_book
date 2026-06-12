@@ -20,3 +20,34 @@ export async function fetchRecipeById(id) {
   if (!res.ok) throw new Error('Recipe not found')
   return res.json()
 }
+
+export async function submitRecipe(recipeData) {
+  const token = localStorage.getItem('token')
+
+  const res = await fetch(`${BASE_URL}/recipes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(recipeData)
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to submit recipe')
+  return data
+}
+
+export async function fetchMyRecipes() {
+  const token = localStorage.getItem('token')
+
+  const res = await fetch(`${BASE_URL}/recipes/mine`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch your recipes')
+  return data
+}

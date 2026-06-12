@@ -2,14 +2,19 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { fetchRecipeById } from '../api/recipes'
+import { saveRecipe, unsaveRecipe, getSavedRecipes } from '../api/cookbook'
+import { useAuth } from '../context/AuthContext'
 
 export default function RecipeDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [recipe, setRecipe] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [saveLoading, setSaveLoading] = useState(false)
 
   useEffect(() => {
     async function loadRecipe() {
@@ -22,27 +27,59 @@ export default function RecipeDetail() {
         setLoading(false)
       }
     }
-
     loadRecipe()
   }, [id])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-orange-50">
-        <Navbar />
-        <p className="text-center text-gray-400 mt-24">Loading...</p>
-      </div>
-    )
+  // Check if this recipe is already saved
+  useEffect(() => {
+    async function checkSaved() {
+      if (!user) return
+      try {
+        const savedRecipes = await getSavedRecipes()
+        const isSaved = savedRecipes.some(r => r.id === Number(id))
+        setSaved(isSaved)
+      } catch (err) {
+        // silently fail — not critical
+      }
+    }
+    checkSaved()
+  }, [id, user])
+
+  async function handleSave() {
+    if (!user) {
+      navigate('/login')
+      return
+    }
+
+    setSaveLoading(true)
+    try {
+      if (saved) {
+        await unsaveRecipe(id)
+        setSaved(false)
+      } else {
+        await saveRecipe(Number(id))
+        setSaved(true)
+      }
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setSaveLoading(false)
+    }
   }
 
-  if (error || !recipe) {
-    return (
-      <div className="min-h-screen bg-orange-50">
-        <Navbar />
-        <p className="text-center text-gray-400 mt-24 text-xl">Recipe not found 😕</p>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="min-h-screen bg-orange-50">
+      <Navbar />
+      <p className="text-center text-gray-400 mt-24">Loading...</p>
+    </div>
+  )
+
+  if (error || !recipe) return (
+    <div className="min-h-screen bg-orange-50">
+      <Navbar />
+      <p className="text-center text-gray-400 mt-24 text-xl">Recipe not found 😕</p>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-orange-50">
@@ -109,8 +146,17 @@ export default function RecipeDetail() {
           </ol>
         </div>
 
-        <button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition-colors">
-            Save to Cookbook
+        {/* Save / Unsave button */}
+        <button
+          onClick={handleSave}
+          disabled={saveLoading}
+          className={`w-full font-semibold py-3 rounded-xl transition-colors
+            ${saved
+              ? 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-500'
+              : 'bg-orange-500 hover:bg-orange-600 text-white'
+            }`}
+        >
+          {saveLoading ? 'Saving...' : saved ? '✅ Saved — click to remove' : '📖 Save to Cookbook'}
         </button>
 
       </main>

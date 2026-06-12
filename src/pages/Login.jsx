@@ -53,7 +53,7 @@ export default function Login() {
       <div className="bg-white rounded-2xl shadow-md w-full max-w-md p-8">
 
         <h1 className="text-3xl font-bold text-orange-500 text-center mb-2">
-          🍳 Recipe Book
+           Recipe Book
         </h1>
         <p className="text-center text-gray-500 mb-6">
           {isLogin ? 'Welcome back!' : 'Create your account'}

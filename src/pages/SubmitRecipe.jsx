@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { submitRecipe } from '../api/recipes'
 
 export default function SubmitRecipe() {
+  const navigate = useNavigate()
 
   const [formData, setFormData] = useState({
     title: '',
@@ -13,44 +16,56 @@ export default function SubmitRecipe() {
     steps: ''
   })
 
-  const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   function handleChange(e) {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    // No backend yet — just show a success message for now
-    console.log('Recipe submitted:', formData)
-    setSubmitted(true)
-  }
+    setError('')
+    setLoading(true)
 
-  // Success screen after submit
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-orange-50">
-        <Navbar />
-        <div className="flex flex-col items-center justify-center mt-24 gap-4">
-          <p className="text-5xl">🎉</p>
-          <h2 className="text-2xl font-bold text-gray-800">Recipe Submitted!</h2>
-          <p className="text-gray-500 text-sm">
-            We'll save it once the backend is connected.
-          </p>
-          <button
-            onClick={() => setSubmitted(false)}
-            className="mt-4 bg-orange-500 text-white font-semibold px-6 py-2 rounded-xl hover:bg-orange-600 transition-colors"
-          >
-            Submit Another
-          </button>
-        </div>
-      </div>
-    )
+    try {
+      // Convert multiline strings to arrays
+      // Split by newline, trim whitespace, remove empty lines
+      const ingredientsArray = formData.ingredients
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line !== '')
+
+      const stepsArray = formData.steps
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line !== '')
+
+      if (ingredientsArray.length === 0 || stepsArray.length === 0) {
+        setError('Please add at least one ingredient and one step')
+        setLoading(false)
+        return
+      }
+
+      await submitRecipe({
+        ...formData,
+        servings: Number(formData.servings),
+        ingredients: ingredientsArray,
+        steps: stepsArray
+      })
+
+      // Redirect to cookbook after successful submit
+      navigate('/cookbook')
+
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="min-h-screen bg-orange-50">
-
       <Navbar />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
@@ -59,13 +74,17 @@ export default function SubmitRecipe() {
           Submit a Recipe
         </h1>
 
+        {error && (
+          <div className="bg-red-100 text-red-600 text-sm px-4 py-3 rounded-xl mb-6">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
           {/* Title */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              Recipe Title
-            </label>
+            <label className="text-sm font-medium text-gray-700">Recipe Title</label>
             <input
               type="text"
               name="title"
@@ -77,12 +96,10 @@ export default function SubmitRecipe() {
             />
           </div>
 
-          {/* Category + Time row */}
+          {/* Category + Time */}
           <div className="flex gap-4">
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-sm font-medium text-gray-700">
-                Category
-              </label>
+              <label className="text-sm font-medium text-gray-700">Category</label>
               <select
                 name="category"
                 value={formData.category}
@@ -99,9 +116,7 @@ export default function SubmitRecipe() {
             </div>
 
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-sm font-medium text-gray-700">
-                Cook Time
-              </label>
+              <label className="text-sm font-medium text-gray-700">Cook Time</label>
               <input
                 type="text"
                 name="time"
@@ -116,9 +131,7 @@ export default function SubmitRecipe() {
 
           {/* Servings */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              Servings
-            </label>
+            <label className="text-sm font-medium text-gray-700">Servings</label>
             <input
               type="number"
               name="servings"
@@ -132,9 +145,7 @@ export default function SubmitRecipe() {
 
           {/* Description */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              Short Description
-            </label>
+            <label className="text-sm font-medium text-gray-700">Short Description</label>
             <textarea
               name="description"
               value={formData.description}
@@ -148,9 +159,7 @@ export default function SubmitRecipe() {
 
           {/* Ingredients */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              Ingredients
-            </label>
+            <label className="text-sm font-medium text-gray-700">Ingredients</label>
             <p className="text-xs text-gray-400">One ingredient per line</p>
             <textarea
               name="ingredients"
@@ -165,9 +174,7 @@ export default function SubmitRecipe() {
 
           {/* Steps */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              Instructions
-            </label>
+            <label className="text-sm font-medium text-gray-700">Instructions</label>
             <p className="text-xs text-gray-400">One step per line</p>
             <textarea
               name="steps"
@@ -183,9 +190,10 @@ export default function SubmitRecipe() {
           {/* Submit */}
           <button
             type="submit"
-            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition-colors"
+            disabled={loading}
+            className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white font-semibold py-3 rounded-xl transition-colors"
           >
-            Submit Recipe
+            {loading ? 'Submitting...' : 'Submit Recipe'}
           </button>
 
         </form>
