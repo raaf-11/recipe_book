@@ -13,14 +13,35 @@ export default function SubmitRecipe() {
     servings: '',
     description: '',
     ingredients: '',
-    steps: ''
+    steps: '',
+    is_public: true,
+    source: 'user'
   })
 
+  const [imagePreview, setImagePreview] = useState(null)
+  const [imageBase64, setImageBase64] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   function handleChange(e) {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  // Convert image file to base64 string
+  function handleImageChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Show preview
+    const previewUrl = URL.createObjectURL(file)
+    setImagePreview(previewUrl)
+
+    // Convert to base64 for storage
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImageBase64(reader.result)
+    }
+    reader.readAsDataURL(file)
   }
 
   async function handleSubmit(e) {
@@ -29,8 +50,6 @@ export default function SubmitRecipe() {
     setLoading(true)
 
     try {
-      // Convert multiline strings to arrays
-      // Split by newline, trim whitespace, remove empty lines
       const ingredientsArray = formData.ingredients
         .split('\n')
         .map(line => line.trim())
@@ -51,12 +70,12 @@ export default function SubmitRecipe() {
         ...formData,
         servings: Number(formData.servings),
         ingredients: ingredientsArray,
-        steps: stepsArray
+        steps: stepsArray,
+        image: imageBase64 || null,
+        is_public: formData.is_public ? 1 : 0
       })
 
-      // Redirect to cookbook after successful submit
       navigate('/cookbook')
-
     } catch (err) {
       setError(err.message)
     } finally {
@@ -69,10 +88,7 @@ export default function SubmitRecipe() {
       <Navbar />
 
       <main className="max-w-2xl mx-auto px-4 py-8">
-
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
-          Submit a Recipe
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-8">Submit a Recipe</h1>
 
         {error && (
           <div className="bg-red-100 text-red-600 text-sm px-4 py-3 rounded-xl mb-6">
@@ -114,7 +130,6 @@ export default function SubmitRecipe() {
                 <option value="Dessert">Dessert</option>
               </select>
             </div>
-
             <div className="flex flex-col gap-1 flex-1">
               <label className="text-sm font-medium text-gray-700">Cook Time</label>
               <input
@@ -150,11 +165,29 @@ export default function SubmitRecipe() {
               name="description"
               value={formData.description}
               onChange={handleChange}
-              placeholder="A brief description of the recipe..."
+              placeholder="A brief description..."
               rows={2}
               required
               className="border border-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white resize-none"
             />
+          </div>
+
+          {/* Image upload */}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Recipe Image (optional)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="border border-gray-300 rounded-xl px-4 py-2 text-sm bg-white"
+            />
+            {imagePreview && (
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="mt-2 w-full h-48 object-cover rounded-xl"
+              />
+            )}
           </div>
 
           {/* Ingredients */}
@@ -187,7 +220,29 @@ export default function SubmitRecipe() {
             />
           </div>
 
-          {/* Submit */}
+          {/* Visibility toggle */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Make this recipe public</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {formData.is_public
+                  ? 'Visible to everyone on the Home page'
+                  : 'Only visible in your Cookbook'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, is_public: !formData.is_public })}
+              className={`w-12 h-6 rounded-full transition-colors relative ${
+                formData.is_public ? 'bg-orange-500' : 'bg-gray-300'
+              }`}
+            >
+              <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                formData.is_public ? 'translate-x-7' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+
           <button
             type="submit"
             disabled={loading}

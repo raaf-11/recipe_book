@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
-import { fetchRecipeById } from '../api/recipes'
 import { saveRecipe, unsaveRecipe, getSavedRecipes } from '../api/cookbook'
 import { useAuth } from '../context/AuthContext'
+import { fetchRecipeById, updateVisibility, deleteRecipe } from '../api/recipes'
 
 export default function RecipeDetail() {
   const { id } = useParams()
@@ -15,20 +15,47 @@ export default function RecipeDetail() {
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const [saveLoading, setSaveLoading] = useState(false)
+  const [isPublic, setIsPublic] = useState(null)
+  const [visibilityLoading, setVisibilityLoading] = useState(false) 
 
   useEffect(() => {
-    async function loadRecipe() {
-      try {
-        const data = await fetchRecipeById(id)
-        setRecipe(data)
-      } catch (err) {
-        setError('Recipe not found.')
-      } finally {
-        setLoading(false)
-      }
+  async function loadRecipe() {
+    try {
+      const data = await fetchRecipeById(id)
+      setRecipe(data)
+      setIsPublic(data.is_public === 1)  // ← add this line
+    } catch (err) {
+      setError('Recipe not found.')
+    } finally {
+      setLoading(false)
     }
-    loadRecipe()
-  }, [id])
+  }
+  loadRecipe()
+}, [id])
+
+//toggle handler
+async function handleVisibilityToggle() {
+  setVisibilityLoading(true)
+  try {
+    await updateVisibility(id, !isPublic)
+    setIsPublic(!isPublic)
+  } catch (err) {
+    alert(err.message)
+  } finally {
+    setVisibilityLoading(false)
+  }
+}
+
+//delete handler
+async function handleDelete() {
+  if (!window.confirm('Delete this recipe? This cannot be undone.')) return
+  try {
+    await deleteRecipe(id)
+    navigate('/')
+  } catch (err) {
+    alert(err.message)
+  }
+}
 
   // Check if this recipe is already saved
   useEffect(() => {
@@ -145,20 +172,53 @@ export default function RecipeDetail() {
             ))}
           </ol>
         </div>
+        
 
-        {/* Save / Unsave button */}
-        <button
-          onClick={handleSave}
-          disabled={saveLoading}
-          className={`w-full font-semibold py-3 rounded-xl transition-colors
-            ${saved
-              ? 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-500'
-              : 'bg-orange-500 hover:bg-orange-600 text-white'
-            }`}
-        >
-          {saveLoading ? 'Saving...' : saved ? '✅ Saved — click to remove' : '📖 Save to Cookbook'}
-        </button>
+       {/* Visibility toggle — only shown to the recipe owner */}
+{user && recipe.user_id === user.id && (
+  <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between mb-4">
+    <div>
+      <p className="text-sm font-medium text-gray-700">Recipe visibility</p>
+      <p className="text-xs text-gray-400 mt-0.5">
+        {isPublic ? 'Visible to everyone on Home page' : 'Only visible in your Cookbook'}
+      </p>
+    </div>
+    <button
+      onClick={handleVisibilityToggle}
+      disabled={visibilityLoading}
+      className={`w-12 h-6 rounded-full transition-colors relative ${
+        isPublic ? 'bg-orange-500' : 'bg-gray-300'
+      }`}
+    >
+      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+        isPublic ? 'translate-x-7' : 'translate-x-1'
+      }`} />
+    </button>
+  </div>
+)}
 
+{/* Delete button — only shown to owner */}
+{user && recipe.user_id === user.id && (
+  <button
+    onClick={handleDelete}
+    className="w-full bg-red-50 hover:bg-red-100 text-red-500 font-semibold py-3 rounded-xl transition-colors mb-4"
+  >
+    🗑 Delete Recipe
+  </button>
+)}
+
+{/* Save to Cookbook button */}
+<button
+  onClick={handleSave}
+  disabled={saveLoading}
+  className={`w-full font-semibold py-3 rounded-xl transition-colors
+    ${saved
+      ? 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-500'
+      : 'bg-orange-500 hover:bg-orange-600 text-white'
+    }`}
+>
+  {saveLoading ? 'Saving...' : saved ? '✅ Saved — click to remove' : '📖 Save to Cookbook'}
+</button>
       </main>
     </div>
   )

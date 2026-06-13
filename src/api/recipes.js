@@ -51,3 +51,35 @@ export async function fetchMyRecipes() {
   if (!res.ok) throw new Error(data.error || 'Failed to fetch your recipes')
   return data
 }
+
+export async function deleteRecipe(id) {
+  const token = localStorage.getItem('token')
+
+  const res = await fetch(`${BASE_URL}/recipes/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to delete recipe')
+  return data
+}
+
+export async function updateVisibility(id, is_public) {
+  const token = localStorage.getItem('token')
+
+  const res = await fetch(`${BASE_URL}/recipes/${id}/visibility`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ is_public })
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to update visibility')
+  return data
+}

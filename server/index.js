@@ -15,7 +15,8 @@ console.log('authRoutes:', typeof authRoutes)
 console.log('generatorRoutes:', typeof generatorRoutes)
 
 app.use(cors())               
-app.use(express.json())       
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))   
 
 
 initializeDatabase()

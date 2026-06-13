@@ -3,20 +3,19 @@ const path=require('path')
 
 const db=new Database(path.join(__dirname,'recipes.db'))
 
-function initializeDatabase(){
-
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS users(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+function initializeDatabase() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
-        `)
-    
-    db.exec(`
-    CREATE TABLE IF NOT EXISTS recipes ( 
+  `)
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS recipes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       category TEXT NOT NULL,
@@ -27,6 +26,8 @@ function initializeDatabase(){
       ingredients TEXT NOT NULL,
       steps TEXT NOT NULL,
       user_id INTEGER,
+      is_public INTEGER DEFAULT 1,
+      source TEXT DEFAULT 'user',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
@@ -43,8 +44,10 @@ function initializeDatabase(){
     )
   `)
 
+  // Add new columns to existing table if they don't exist yet
+  try { db.exec(`ALTER TABLE recipes ADD COLUMN is_public INTEGER DEFAULT 1`) } catch(e) {}
+  try { db.exec(`ALTER TABLE recipes ADD COLUMN source TEXT DEFAULT 'user'`) } catch(e) {}
+
   console.log('Database initialized ✅')
-
-
 }
 module.exports = { db, initializeDatabase }
