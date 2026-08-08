@@ -108,7 +108,7 @@ Calls the Groq API and Unsplash API and returns a complete recipe object.
 Make sure you have the following installed:
 
 - Node.js v18+
-- PostgreSQL (or use Neon.tech free tier)
+- PostgreSQL 
 - Groq API key — console.groq.com
 - Unsplash Access Key — unsplash.com/developers
 
