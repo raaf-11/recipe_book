@@ -658,7 +658,7 @@ export default function SubmitRecipe() {
                   </div>
                 </div>
 
-                {/* Toggle */}
+                {/* Toggle — fixed only */}
                 <button
                   type="button"
                   onClick={() =>
@@ -668,12 +668,16 @@ export default function SubmitRecipe() {
                     })
                   }
                   className="
-                    w-12
-                    h-6
-                    rounded-full
                     relative
+                    w-12
+                    h-7
+                    rounded-full
                     transition-colors
+                    duration-200
                     shrink-0
+                    flex
+                    items-center
+                    p-1
                   "
                   style={{
                     backgroundColor: formData.is_public
@@ -684,18 +688,18 @@ export default function SubmitRecipe() {
                 >
                   <span
                     className={`
-                      absolute
-                      top-1
-                      w-4
-                      h-4
+                      block
+                      w-5
+                      h-5
                       bg-white
                       rounded-full
                       shadow-sm
                       transition-transform
+                      duration-200
                       ${
                         formData.is_public
-                          ? 'translate-x-7'
-                          : 'translate-x-1'
+                          ? 'translate-x-5'
+                          : 'translate-x-0'
                       }
                     `}
                   />

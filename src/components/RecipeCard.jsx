@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clock, Trash2 } from 'lucide-react';
+import React from 'react'
+import { Clock, Trash2 } from 'lucide-react'
 
 export default function RecipeCard({
   recipe,
@@ -10,23 +10,28 @@ export default function RecipeCard({
   const {
     id,
     title,
+    category,
     cuisine,
     time,
     description,
     image,
     userId,
     authorId,
-  } = recipe;
+  } = recipe
+
+  // Use category for the current recipe structure.
+  // Keep cuisine as a fallback for older recipes.
+  const recipeCategory = category || cuisine
 
   // Recipes from the API may use either userId or authorId
-  const ownerId = userId ?? authorId;
+  const ownerId = userId ?? authorId
 
   const canDelete = Boolean(
     onDelete &&
-    currentUserId &&
-    ownerId &&
-    String(currentUserId) === String(ownerId)
-  );
+      currentUserId &&
+      ownerId &&
+      String(currentUserId) === String(ownerId)
+  )
 
   return (
     <article
@@ -53,7 +58,6 @@ export default function RecipeCard({
         hover:shadow-[0_14px_30px_rgba(0,0,0,0.12)]
       "
     >
-
       {/* ================================
           RECIPE IMAGE
       ================================= */}
@@ -91,13 +95,46 @@ export default function RecipeCard({
           </div>
         )}
 
+        {/* Category badge */}
+        {recipeCategory && (
+          <span
+            className="
+              absolute
+              top-4
+              left-4
+
+              inline-flex
+              items-center
+
+              px-3
+              py-1.5
+
+              rounded-full
+
+              bg-[#FFE4D0]
+              text-[#7A3517]
+
+              text-[10px]
+              sm:text-[11px]
+
+              font-semibold
+              uppercase
+              tracking-wide
+
+              shadow-sm
+            "
+          >
+            {recipeCategory}
+          </span>
+        )}
+
         {/* Delete button — owner only */}
         {canDelete && (
           <button
             type="button"
             onClick={(e) => {
-              e.stopPropagation();
-              onDelete(id);
+              e.stopPropagation()
+              onDelete(id)
             }}
             aria-label={`Delete ${title}`}
             title="Delete Recipe"
@@ -162,58 +199,30 @@ export default function RecipeCard({
           cursor-pointer
         "
       >
+        {/* Cook Time */}
+        <div
+          className="
+            flex
+            items-center
+            gap-1.5
 
-        {/* Category + Cook Time */}
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
+            text-[#625C57]
 
-          <span
-            className="
-              inline-flex
-              items-center
-              px-2.5
-              sm:px-3
-              py-1
-              sm:py-1.5
+            text-[11px]
+            sm:text-xs
 
-              rounded-sm
+            font-medium
 
-              bg-[#FFE4D0]
-              text-[#7A3517]
+            mb-3
+            sm:mb-4
+          "
+        >
+          <Clock
+            className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+            strokeWidth={1.8}
+          />
 
-              text-[10px]
-              sm:text-[11px]
-
-              font-bold
-              uppercase
-              tracking-wide
-            "
-          >
-            {cuisine}
-          </span>
-
-          <div
-            className="
-              flex
-              items-center
-              gap-1
-              sm:gap-1.5
-
-              text-[#625C57]
-
-              text-[11px]
-              sm:text-xs
-
-              font-medium
-            "
-          >
-            <Clock
-              className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-              strokeWidth={1.8}
-            />
-
-            <span>{time}</span>
-          </div>
-
+          <span>{time}</span>
         </div>
 
         {/* Title */}
@@ -261,8 +270,7 @@ export default function RecipeCard({
         >
           {description}
         </p>
-
       </div>
     </article>
-  );
+  )
 }

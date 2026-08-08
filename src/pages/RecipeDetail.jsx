@@ -246,26 +246,7 @@ export default function RecipeDetail() {
                 Back
               </button>
 
-              {/* Category */}
-              {recipe.category && (
-                <span
-                  className="
-                    inline-flex
-                    items-center
-                    px-3
-                    py-1
-                    rounded-full
-                    bg-[#FFE4D0]
-                    text-[#7A3517]
-                    text-[10px]
-                    font-semibold
-                    uppercase
-                    tracking-wide
-                  "
-                >
-                  {recipe.category}
-                </span>
-              )}
+              
 
               {/* Title */}
               <h1
@@ -546,40 +527,47 @@ export default function RecipeDetail() {
                       </div>
 
                       <button
-                        onClick={handleVisibilityToggle}
-                        disabled={visibilityLoading}
-                        className={`
-                          w-10
-                          h-5
-                          rounded-full
-                          relative
-                          transition-colors
-                          shrink-0
-                          ${
-                            isPublic
-                              ? 'bg-[#F47A32]'
-                              : 'bg-[#D8D0C9]'
-                          }
-                        `}
-                      >
-                        <span
-                          className={`
-                            absolute
-                            top-0.5
-                            w-4
-                            h-4
-                            bg-white
-                            rounded-full
-                            shadow-sm
-                            transition-transform
-                            ${
-                              isPublic
-                                ? 'translate-x-5'
-                                : 'translate-x-0.5'
-                            }
-                          `}
-                        />
-                      </button>
+  type="button"
+  onClick={handleVisibilityToggle}
+  disabled={visibilityLoading}
+  aria-label={isPublic ? 'Make recipe private' : 'Make recipe public'}
+  className={`
+    relative
+    inline-flex
+    items-center
+    w-11
+    h-6
+    rounded-full
+    shrink-0
+    transition-colors
+    duration-200
+    ${
+      isPublic
+        ? 'bg-[#F47A32]'
+        : 'bg-[#D8D0C9]'
+    }
+  `}
+>
+  <span
+    className={`
+      absolute
+      top-1
+      left-1
+      w-4
+      h-4
+      rounded-full
+      bg-white
+      shadow-sm
+      transition-transform
+      duration-200
+      ${
+        isPublic
+          ? 'translate-x-5'
+          : 'translate-x-0'
+      }
+    `}
+  />
+</button>
                     </div>
                   </div>
 
@@ -663,9 +651,7 @@ export default function RecipeDetail() {
                         Category
                       </span>
 
-                      <span className="px-2.5 py-1 rounded-full bg-[#FFE4D0] text-[#7A3517] text-[10px] font-medium">
-                        {recipe.category}
-                      </span>
+                      
                     </div>
                   </>
                 )}
