@@ -1,6 +1,5 @@
-const { db, initializeDatabase } = require('./database')
-
-initializeDatabase()
+require('dotenv').config()
+const { query, initializeDatabase } = require('./database')
 
 const recipes = [
   {
@@ -13,16 +12,7 @@ const recipes = [
     ingredients: JSON.stringify(['1 ½ cups all-purpose flour','2 tbsp sugar','1 tsp baking powder','½ tsp baking soda','1 cup buttermilk','1 egg','2 tbsp melted butter','Pinch of salt']),
     steps: JSON.stringify(['In a large bowl, whisk together flour, sugar, baking powder, baking soda and salt.','In another bowl, mix buttermilk, egg and melted butter.','Pour the wet ingredients into the dry ingredients and stir until just combined. Do not overmix.','Heat a non-stick pan over medium heat and lightly grease it.','Pour ¼ cup of batter per pancake. Cook until bubbles form on top, then flip.','Cook the other side for 1-2 minutes until golden. Serve warm.'])
   },
-  {
-    title: 'Avocado Toast',
-    category: 'Breakfast',
-    time: '10 mins',
-    servings: 2,
-    description: 'Creamy avocado on toasted sourdough with a pinch of chili flakes.',
-    image: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c820?w=800',
-    ingredients: JSON.stringify(['2 slices sourdough bread','1 ripe avocado','1 tbsp lemon juice','Salt and pepper to taste','Chili flakes','Optional: poached egg on top']),
-    steps: JSON.stringify(['Toast the sourdough slices until golden and crisp.','Scoop the avocado into a bowl. Add lemon juice, salt and pepper.','Mash with a fork to your preferred texture — chunky or smooth.','Spread generously on the toast.','Top with chili flakes and serve immediately.'])
-  },
+ 
   {
     title: 'Grilled Chicken Salad',
     category: 'Lunch',
@@ -65,15 +55,20 @@ const recipes = [
   }
 ]
 
-db.exec('DELETE FROM recipes')
 
-const insert = db.prepare(`
-  INSERT INTO recipes (title, category, time, servings, description, image, ingredients, steps)
-  VALUES (@title, @category, @time, @servings, @description, @image, @ingredients, @steps)
-`)
+async function seed() {
+  await initializeDatabase()
+  await query('DELETE FROM recipes WHERE user_id IS NULL')
 
-for (const recipe of recipes) {
-  insert.run(recipe)
+  for (const recipe of recipes) {
+    await query(
+      `INSERT INTO recipes (title, category, time, servings, description, image, ingredients, steps)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [recipe.title, recipe.category, recipe.time, recipe.servings, recipe.description, recipe.image, recipe.ingredients, recipe.steps]
+    )
+  }
+  console.log('Seeded 5 recipes ✅')
+  process.exit(0)
 }
 
-console.log('Database seeded with 6 recipes ✅')
+seed()

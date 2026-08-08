@@ -1,58 +1,66 @@
 const express = require('express')
 const router = express.Router()
-const { db } = require('../database')
+const { query } = require('../database')
 const authMiddleware = require('../middleware/auth')
 
 router.use(authMiddleware)
 
-router.get('/', (req, res) => {
-  const recipes = db.prepare(`
-    SELECT recipes.* FROM recipes
-    INNER JOIN saved_recipes ON recipes.id = saved_recipes.recipe_id
-    WHERE saved_recipes.user_id = ?
-    ORDER BY saved_recipes.saved_at DESC
-  `).all(req.user.id)
+router.get('/', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT recipes.* FROM recipes
+      INNER JOIN saved_recipes ON recipes.id = saved_recipes.recipe_id
+      WHERE saved_recipes.user_id = $1
+      ORDER BY saved_recipes.saved_at DESC
+    `, [req.user.id])
 
-  const parsed = recipes.map(recipe => ({
-    ...recipe,
-    ingredients: JSON.parse(recipe.ingredients),
-    steps: JSON.parse(recipe.steps)
-  }))
-
-  res.json(parsed)
+    const parsed = result.rows.map(recipe => ({
+      ...recipe,
+      ingredients: JSON.parse(recipe.ingredients),
+      steps: JSON.parse(recipe.steps)
+    }))
+    res.json(parsed)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Server error' })
+  }
 })
 
-
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { recipe_id } = req.body
+  if (!recipe_id) return res.status(400).json({ error: 'recipe_id is required' })
 
-  if (!recipe_id) {
-    return res.status(400).json({ error: 'recipe_id is required' })
+  try {
+    const existing = await query(
+      'SELECT id FROM saved_recipes WHERE user_id = $1 AND recipe_id = $2',
+      [req.user.id, recipe_id]
+    )
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Recipe already saved' })
+    }
+
+    await query(
+      'INSERT INTO saved_recipes (user_id, recipe_id) VALUES ($1, $2)',
+      [req.user.id, recipe_id]
+    )
+    res.status(201).json({ message: 'Recipe saved ✅' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Server error' })
   }
-
-  
-  const existing = db.prepare(
-    'SELECT id FROM saved_recipes WHERE user_id = ? AND recipe_id = ?'
-  ).get(req.user.id, recipe_id)
-
-  if (existing) {
-    return res.status(400).json({ error: 'Recipe already saved' })
-  }
-
-  db.prepare(
-    'INSERT INTO saved_recipes (user_id, recipe_id) VALUES (?, ?)'
-  ).run(req.user.id, recipe_id)
-
-  res.status(201).json({ message: 'Recipe saved ✅' })
 })
 
-
-router.delete('/:recipeId', (req, res) => {
-  db.prepare(
-    'DELETE FROM saved_recipes WHERE user_id = ? AND recipe_id = ?'
-  ).run(req.user.id, req.params.recipeId)
-
-  res.json({ message: 'Recipe removed ✅' })
+router.delete('/:recipeId', async (req, res) => {
+  try {
+    await query(
+      'DELETE FROM saved_recipes WHERE user_id = $1 AND recipe_id = $2',
+      [req.user.id, req.params.recipeId]
+    )
+    res.json({ message: 'Recipe removed ✅' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Server error' })
+  }
 })
 
 module.exports = router

@@ -1,148 +1,149 @@
 const express = require('express')
 const router = express.Router()
-const { db } = require('../database')
-const authMiddleware = require('../middleware/auth')  // ← moved to top
+const { query } = require('../database')
+const authMiddleware = require('../middleware/auth')
 
-// GET /api/recipes — fetch all recipes
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { category, search } = req.query
 
-  let query = `
+  let text = `
     SELECT recipes.*, users.name as author_name
     FROM recipes
     LEFT JOIN users ON recipes.user_id = users.id
     WHERE recipes.is_public = 1
   `
   const params = []
-  const conditions = []
+  let i = 1
 
   if (category && category !== 'All') {
-    conditions.push('recipes.category = ?')
+    text += ` AND recipes.category = $${i++}`
     params.push(category)
   }
 
   if (search) {
-    conditions.push('recipes.title LIKE ?')
+    text += ` AND recipes.title ILIKE $${i++}`
     params.push(`%${search}%`)
   }
 
-  if (conditions.length > 0) {
-    query += ' AND ' + conditions.join(' AND ')
+  text += ' ORDER BY recipes.created_at DESC'
+
+  try {
+    const result = await query(text, params)
+    const parsed = result.rows.map(recipe => ({
+      ...recipe,
+      ingredients: JSON.parse(recipe.ingredients),
+      steps: JSON.parse(recipe.steps)
+    }))
+    res.json(parsed)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Server error' })
   }
-
-  query += ' ORDER BY recipes.created_at DESC'
-
-  const recipes = db.prepare(query).all(...params)
-
-  const parsed = recipes.map(recipe => ({
-    ...recipe,
-    ingredients: JSON.parse(recipe.ingredients),
-    steps: JSON.parse(recipe.steps)
-  }))
-
-  res.json(parsed)
-})
-// GET /api/recipes/mine — get recipes submitted by logged in user
-// ← must be BEFORE /:id
-router.get('/mine', authMiddleware, (req, res) => {
-  const recipes = db.prepare(
-    'SELECT * FROM recipes WHERE user_id = ? ORDER BY created_at DESC'
-  ).all(req.user.id)
-
-  const parsed = recipes.map(recipe => ({
-    ...recipe,
-    ingredients: JSON.parse(recipe.ingredients),
-    steps: JSON.parse(recipe.steps)
-  }))
-
-  res.json(parsed)
 })
 
-// GET /api/recipes/:id — fetch a single recipe by id
-router.get('/:id', (req, res) => {
-  const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(req.params.id)
-
-  if (!recipe) {
-    return res.status(404).json({ error: 'Recipe not found' })
+router.get('/mine', authMiddleware, async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT * FROM recipes WHERE user_id = $1 ORDER BY created_at DESC',
+      [req.user.id]
+    )
+    const parsed = result.rows.map(recipe => ({
+      ...recipe,
+      ingredients: JSON.parse(recipe.ingredients),
+      steps: JSON.parse(recipe.steps)
+    }))
+    res.json(parsed)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Server error' })
   }
-
-  res.json({
-    ...recipe,
-    ingredients: JSON.parse(recipe.ingredients),
-    steps: JSON.parse(recipe.steps)
-  })
 })
 
-// POST /api/recipes — submit a new recipe (requires auth)
-router.post('/', authMiddleware, (req, res) => {
+router.get('/:id', async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM recipes WHERE id = $1', [req.params.id])
+    const recipe = result.rows[0]
+
+    if (!recipe) return res.status(404).json({ error: 'Recipe not found' })
+
+    res.json({
+      ...recipe,
+      ingredients: JSON.parse(recipe.ingredients),
+      steps: JSON.parse(recipe.steps)
+    })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+router.post('/', authMiddleware, async (req, res) => {
   const { title, category, time, servings, description, ingredients, steps, image, is_public, source } = req.body
 
   if (!title || !category || !time || !servings || !ingredients || !steps) {
     return res.status(400).json({ error: 'Please fill in all required fields' })
   }
 
-  const result = db.prepare(`
-    INSERT INTO recipes (title, category, time, servings, description, image, ingredients, steps, user_id, is_public, source)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    title,
-    category,
-    time,
-    Number(servings),
-    description,
-    image || null,
-    JSON.stringify(ingredients),
-    JSON.stringify(steps),
-    req.user.id,
-    is_public !== undefined ? is_public : 1,
-    source || 'user'
-  )
+  try {
+    const result = await query(
+      `INSERT INTO recipes 
+        (title, category, time, servings, description, image, ingredients, steps, user_id, is_public, source)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       RETURNING id`,
+      [
+        title, category, time, Number(servings), description,
+        image || null,
+        JSON.stringify(ingredients),
+        JSON.stringify(steps),
+        req.user.id,
+        is_public !== undefined ? is_public : 1,
+        source || 'user'
+      ]
+    )
 
-  res.status(201).json({
-    message: 'Recipe submitted successfully ✅',
-    id: result.lastInsertRowid
-  })
+    res.status(201).json({
+      message: 'Recipe submitted successfully ✅',
+      id: result.rows[0].id
+    })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Server error' })
+  }
 })
 
-
-  // DELETE /api/recipes/:id — delete a recipe (only the owner can delete)
-router.delete('/:id', authMiddleware, (req, res) => {
-  const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(req.params.id)
-
-  if (!recipe) {
-    return res.status(404).json({ error: 'Recipe not found' })
-  }
-
-  // Make sure the logged in user owns this recipe
-  if (recipe.user_id !== req.user.id) {
-    return res.status(403).json({ error: 'You can only delete your own recipes' })
-  }
-
-  // Delete from saved_recipes first (foreign key constraint)
-  db.prepare('DELETE FROM saved_recipes WHERE recipe_id = ?').run(req.params.id)
-
-  // Then delete the recipe
-  db.prepare('DELETE FROM recipes WHERE id = ?').run(req.params.id)
-
-  res.json({ message: 'Recipe deleted ✅' })
-})
-// PATCH /api/recipes/:id/visibility — toggle public/private
-router.patch('/:id/visibility', authMiddleware, (req, res) => {
+router.patch('/:id/visibility', authMiddleware, async (req, res) => {
   const { is_public } = req.body
-  const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(req.params.id)
+  try {
+    const result = await query('SELECT * FROM recipes WHERE id = $1', [req.params.id])
+    const recipe = result.rows[0]
 
-  if (!recipe) {
-    return res.status(404).json({ error: 'Recipe not found' })
+    if (!recipe) return res.status(404).json({ error: 'Recipe not found' })
+    if (recipe.user_id !== req.user.id) return res.status(403).json({ error: 'Not your recipe' })
+
+    await query('UPDATE recipes SET is_public = $1 WHERE id = $2', [is_public ? 1 : 0, req.params.id])
+    res.json({ message: 'Visibility updated ✅', is_public })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Server error' })
   }
+})
 
-  if (recipe.user_id !== req.user.id) {
-    return res.status(403).json({ error: 'You can only edit your own recipes' })
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM recipes WHERE id = $1', [req.params.id])
+    const recipe = result.rows[0]
+
+    if (!recipe) return res.status(404).json({ error: 'Recipe not found' })
+    if (recipe.user_id !== req.user.id) return res.status(403).json({ error: 'Not your recipe' })
+
+    await query('DELETE FROM saved_recipes WHERE recipe_id = $1', [req.params.id])
+    await query('DELETE FROM recipes WHERE id = $1', [req.params.id])
+
+    res.json({ message: 'Recipe deleted ✅' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Server error' })
   }
-
-  db.prepare('UPDATE recipes SET is_public = ? WHERE id = ?')
-    .run(is_public ? 1 : 0, req.params.id)
-
-  res.json({ message: 'Visibility updated ✅', is_public })
 })
 
 module.exports = router

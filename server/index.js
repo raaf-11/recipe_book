@@ -10,16 +10,11 @@ const cookbookRoutes = require('./routes/cookbook')
 
 const app = express()
 const PORT = process.env.PORT || 3000
-console.log('recipeRoutes:', typeof recipeRoutes)
-console.log('authRoutes:', typeof authRoutes)
-console.log('generatorRoutes:', typeof generatorRoutes)
 
 app.use(cors())               
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))   
 
-
-initializeDatabase()
 
 app.use('/api/recipes', recipeRoutes)
 app.use('/api/auth', authRoutes)     
@@ -31,6 +26,11 @@ app.get('/api/health', (req, res) => {
 })
 
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`)
-})
+async function start() {
+  await initializeDatabase()
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`)
+  })
+}
+
+start()
